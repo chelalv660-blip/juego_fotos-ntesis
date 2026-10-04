@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desafío Fotosíntesis: Trivia Interactiva</title>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            --card-bg: rgba(255, 255, 255, 0.1);
+            --accent-green: #00ff87;
+            --accent-cyan: #60efff;
+            --accent-pink: #ff007f;
+            --accent-yellow: #ffeb3b;
+            --text-color: #ffffff;
+            --correct-color: #2ed573;
+            --wrong-color: #ff4757;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: rgba(18, 28, 37, 0.85);
+            backdrop-filter: blur(16px);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px;
+            padding: 30px;
+            width: 100%;
+            max-width: 650px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, var(--accent-green), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .subtitle {
+            color: #b0bec5;
+            font-size: 0.95rem;
+            margin-bottom: 25px;
+        }
+
+        /* Dificultad */
+        .difficulty-selector {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .diff-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .diff-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .diff-btn.active[data-level="facil"] {
+            background: #2ed573;
+            color: #000;
+            border-color: #2ed573;
+            box-shadow: 0 0 15px rgba(46, 213, 115, 0.5);
+        }
+
+        .diff-btn.active[data-level="medio"] {
+            background: #ffa500;
+            color: #000;
+            border-color: #ffa500;
+            box-shadow: 0 0 15px rgba(255, 165, 0, 0.5);
+        }
+
+        .diff-btn.active[data-level="dificil"] {
+            background: #ff4757;
+            color: #fff;
+            border-color: #ff4757;
+            box-shadow: 0 0 15px rgba(255, 71, 87, 0.5);
+        }
+
+        /* Stats Bar Header */
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .timer-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        .timer-bar {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, var(--accent-green), var(--accent-yellow), var(--accent-pink));
+            transition: width 0.1s linear;
+        }
+
+        /* Pregunta */
+        .question-box {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 25px;
+            line-height: 1.4;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Opciones */
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .option-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            color: #fff;
+            padding: 14px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .option-btn:hover:not([disabled]) {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--accent-cyan);
+            transform: translateY(-2px);
+        }
+
+        .option-btn.correct {
+            background: rgba(46, 213, 115, 0.25) !important;
+            border-color: var(--correct-color) !important;
+            color: var(--correct-color);
+            font-weight: bold;
+        }
+
+        .option-btn.wrong {
+            background: rgba(255, 71, 87, 0.25) !important;
+            border-color: var(--wrong-color) !important;
+            color: var(--wrong-color);
+        }
+
+        /* Feedback y Siguiente */
+        .feedback {
+            min-height: 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .primary-btn {
+            background: linear-gradient(45deg, var(--accent-cyan), var(--accent-green));
+            color: #000;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+        }
+
+        .primary-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(96, 239, 255, 0.5);
+        }
+
+        /* Pantalla Final */
+        .results-screen {
+            display: none;
+        }
+
+        .score-big {
+            font-size: 4rem;
+            font-weight: 800;
+            background: linear-gradient(45deg, var(--accent-yellow), var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 20px 0;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <h1>Fotosíntesis Trivia</h1>
+    <p class="subtitle">¡Demuestra tus conocimientos biológicos!</p>
+
+    <!-- Selección de Dificultad -->
+    <div id="setup-screen">
+        <p style="margin-bottom: 15px;">Selecciona el nivel de dificultad:</p>
+        <div class="difficulty-selector">
+            <button class="diff-btn active" data-level="facil" onclick="selectDifficulty('facil')">Principiante</button>
+            <button class="diff-btn" data-level="medio" onclick="selectDifficulty('medio')">Intermedio</button>
+            <button class="diff-btn" data-level="dificil" onclick="selectDifficulty('dificil')">Experto</button>
+        </div>
+        <button class="primary-btn" onclick="startGame()">Comenzar Juego</button>
+    </div>
+
+    <!-- Pantalla de Juego -->
+    <div id="quiz-screen" class="hidden">
+        <div class="game-header">
+            <span>Pregunta: <span id="current-q">1</span>/<span id="total-q">5</span></span>
+            <span>Puntos: <span id="score-val">0</span></span>
+            <span>Tiempo: <span id="timer-val">15</span>s</span>
+        </div>
+
+        <div class="timer-container">
+            <div id="timer-bar" class="timer-bar"></div>
+        </div>
+
+        <div id="question-text" class="question-box">Cargando pregunta...</div>
+
+        <div id="options-container" class="options-grid"></div>
+
+        <div id="feedback-text" class="feedback"></div>
+
+        <button id="next-btn" class="primary-btn hidden" onclick="nextQuestion()">Siguiente Pregunta</button>
+    </div>
+
+    <!-- Pantalla de Resultados -->
+    <div id="results-screen" class="results-screen">
+        <h2>¡Desafío Completado!</h2>
+        <div id="final-score" class="score-big">0/5</div>
+        <p id="performance-msg" style="font-size: 1.2rem; margin-bottom: 25px;"></p>
+        <button class="primary-btn" onclick="resetGame()">Jugar de Nuevo</button>
+    </div>
+</div>
+
+<script>
+    const questionsDatabase = {
+        facil: [
+            {
+                q: "¿Qué gas liberan las plantas a la atmósfera durante la fotosíntesis?",
+                options: ["Dióxido de carbono (CO2)", "Oxígeno (O2)", "Nitrógeno (N2)", "Metano (CH4)"],
+                correct: 1
+            },
+            {
+                q: "¿Cuál es la fuente de energía principal para que ocurra la fotosíntesis?",
+                options: ["El calor del suelo", "La energía eléctrica", "La luz del Sol", "El viento"],
+                correct: 2
+            },
+            {
+                q: "¿Qué pigmento le da el color verde a las plantas y atrapa la luz solar?",
+                options: ["Hemoglobina", "Melanina", "Clorofila", "Caroteno"],
+                correct: 2
+            },
+            {
+                q: "¿A través de qué órgano absorben las plantas el agua del suelo?",
+                options: ["Tallo", "Hojas", "Flores", "Raíces"],
+                correct: 3
+            },
+            {
+                q: "¿Cómo se llaman los diminutos poros en las hojas por donde entra el CO2?",
+                options: ["Estomas", "Células", "Túbulos", "Pores"],
+                correct: 0
+            }
+        ],
+        medio: [
+            {
+                q: "¿En qué orgánulo celular específico ocurre el proceso de la fotosíntesis?",
+                options: ["Mitocondria", "Núcleo", "Cloroplasto", "Ribosoma"],
+                correct: 2
+            },
+            {
+                q: "¿Cuál es el azúcar orgánico (carbohidrato) producido durante la fotosíntesis?",
+                options: ["Fructosa", "Glucosa (C6H12O6)", "Sacarosa", "Lactosa"],
+                correct: 1
+            },
+            {
+                q: "¿En qué etapa de la fotosíntesis se produce la liberación de Oxígeno?",
+                options: ["Ciclo de Calvin", "Fase Luminosa", "Fase Oscura", "Glucólisis"],
+                correct: 1
+            },
+            {
+                q: "¿De qué molécula proviene exactamente el oxígeno que expulsan las plantas?",
+                options: ["Del Dióxido de Carbono (CO2)", "Del Agua (H2O)", "De la Glucosa", "Del Aire"],
+                correct: 1
+            },
+            {
+                q: "¿Cuál es la función principal de la Glucosa generada por la planta?",
+                options: ["Darle color a las flores", "Servir de alimento y energía para la planta", "Atrapar insectos", "Refrescar las hojas"],
+                correct: 1
+            }
+        ],
+        dificil: [
+            {
+                q: "¿Dónde ocurren específicamente las reacciones de la fase luminosa dentro del cloroplasto?",
+                options: ["En el Estroma", "En la membrana del Tilacode", "En la cresta mitocondrial", "En el citoplasma"],
+                correct: 1
+            },
+            {
+                q: "¿Cómo se llama la fase fotosintética donde se fija el CO2 para formar azúcares sin requerir luz directa?",
+                options: ["Fotólisis", "Ciclo de Krebs", "Ciclo de Calvin", "Cadena respiratoria"],
+                correct: 2
+            },
+            {
+                q: "¿Qué moléculas transportadoras de energía de alta energía se producen en la fase luminosa para usarse en la fase oscura?",
+                options: ["ATP y NADPH", "ADN y ARN", "ADP y NADP+", "Lípidos y Proteínas"],
+                correct: 0
+            },
+            {
+                q: "¿Qué sucede durante el proceso conocido como fotólisis del agua?",
+                options: ["La luz rompe la molécula de H2O liberando electrones, protones y O2", "El agua se congela dentro de la hoja", "El CO2 se mezcla con el agua para formar ácido", "La clorofila se destruye con el agua"],
+                correct: 0
+            },
+            {
+                q: "¿En qué parte del cloroplasto se lleva a cabo el Ciclo de Calvin?",
+                options: ["En los tilacoides", "En la grana", "En el estroma", "En la pared celular"],
+                correct: 2
+            }
+        ]
+    };
+
+    let selectedLevel = 'facil';
+    let currentQuestions = [];
+    let currentQIndex = 0;
+    let score = 0;
+    let timer = null;
+    let timeLeft = 15;
+    const TIME_LIMIT = 15;
+
+    function selectDifficulty(level) {
+        selectedLevel = level;
+        document.querySelectorAll('.diff-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.level === level);
+        });
+    }
+
+    function startGame() {
+        document.getElementById('setup-screen').classList.add('hidden');
+        document.getElementById('quiz-screen').classList.remove('hidden');
+        
+        currentQuestions = [...questionsDatabase[selectedLevel]];
+        currentQIndex = 0;
+        score = 0;
+        document.getElementById('score-val').textContent = score;
+        document.getElementById('total-q').textContent = currentQuestions.length;
+
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        resetState();
+        const q = currentQuestions[currentQIndex];
+        document.getElementById('current-q').textContent = currentQIndex + 1;
+        document.getElementById('question-text').textContent = q.q;
+
+        const container = document.getElementById('options-container');
+        container.innerHTML = '';
+
+        q.options.forEach((opt, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = opt;
+            btn.onclick = () => selectOption(index);
+            container.appendChild(btn);
+        });
+
+        startTimer();
+    }
+
+    function startTimer() {
+        timeLeft = TIME_LIMIT;
+        document.getElementById('timer-val').textContent = timeLeft;
+        document.getElementById('timer-bar').style.width = '100%';
+
+        timer = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer-val').textContent = timeLeft;
+            const pct = (timeLeft / TIME_LIMIT) * 100;
+            document.getElementById('timer-bar').style.width = `${pct}%`;
+
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                handleTimeout();
+            }
+        }, 1000);
+    }
+
+    function resetState() {
+        clearInterval(timer);
+        document.getElementById('feedback-text').textContent = '';
+        document.getElementById('next-btn').classList.add('hidden');
+    }
+
+    function selectOption(index) {
+        clearInterval(timer);
+        const q = currentQuestions[currentQIndex];
+        const buttons = document.querySelectorAll('.option-btn');
+        
+        buttons.forEach(btn => btn.disabled = true);
+
+        if (index === q.correct) {
+            buttons[index].classList.add('correct');
+            document.getElementById('feedback-text').textContent = '¡Correcto! 🎉';
+            document.getElementById('feedback-text').style.color = 'var(--correct-color)';
+            score += 10 + timeLeft; // Bonus por tiempo restante
+            document.getElementById('score-val').textContent = score;
+        } else {
+            buttons[index].classList.add('wrong');
+            buttons[q.correct].classList.add('correct');
+            document.getElementById('feedback-text').textContent = '¡Incorrecto! ❌';
+            document.getElementById('feedback-text').style.color = 'var(--wrong-color)';
+        }
+
+        document.getElementById('next-btn').classList.remove('hidden');
+    }
+
+    function handleTimeout() {
+        const q = currentQuestions[currentQIndex];
+        const buttons = document.querySelectorAll('.option-btn');
+        buttons.forEach(btn => btn.disabled = true);
+        
+        buttons[q.correct].classList.add('correct');
+        document.getElementById('feedback-text').textContent = '¡Se agotó el tiempo! ⏰';
+        document.getElementById('feedback-text').style.color = 'var(--wrong-color)';
+        document.getElementById('next-btn').classList.remove('hidden');
+    }
+
+    function nextQuestion() {
+        currentQIndex++;
+        if (currentQIndex < currentQuestions.length) {
+            loadQuestion();
+        } else {
+            showResults();
+        }
+    }
+
+    function showResults() {
+        document.getElementById('quiz-screen').classList.add('hidden');
+        document.getElementById('results-screen').style.display = 'block';
+
+        const maxScore = currentQuestions.length * 25;
+        document.getElementById('final-score').textContent = `${score} Pts`;
+
+        let msg = "";
+        if (score > maxScore * 0.8) {
+            msg = "¡Excelente! Eres un maestro de la fotosíntesis 🌱⚡";
+        } else if (score > maxScore * 0.5) {
+            msg = "¡Buen trabajo! Tienes bases sólidas sobre el tema 🍃";
+        } else {
+            msg = "¡Sigue repasando las tarjetas de estudio para dominar la materia! 📚";
+        }
+        document.getElementById('performance-msg').textContent = msg;
+    }
+
+    function resetGame() {
+        document.getElementById('results-screen').style.display = 'none';
+        document.getElementById('setup-screen').classList.remove('hidden');
+    }
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
